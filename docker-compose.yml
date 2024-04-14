@@ -4,11 +4,14 @@ services:
   tickets:
     build: 
       context: ./api-tickets/
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile.prod
     ports:
       - "3003:3000"
+    networks:
+      - backend
     environment:
-      DB_HOST: localhost
+      PORT: 3000
+      DB_HOST: mongo
       DB_PORT: 27017
       DB_DATABASE: dev
     restart: "unless-stopped"
@@ -16,53 +19,58 @@ services:
   event:
     build: 
       context: ./api-events
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile.prod
     restart: always
     ports:
       - "3002:3000"
-    links:
-      - mongo
+    networks:
+      - backend
     environment:
-      DB_HOST: localhost
+      PORT: 3000
+      DB_HOST: mongo
       DB_PORT: 27017
-      DB_DATABASE: event
+      DB_DATABASE: dev
 
   gateway:
     build:
       context: ./api-gateway
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile.prod
     restart: always
     ports:
       - "3000:3000"
-    links:
-      - users
-      - event
-      - buy
-      - rabbitmq
+    networks:
+      - backend
     environment:
+      PORT: 3000
+      DB_HOST: mongo
+      DB_PORT: 27017
+      DB_DATABASE: dev
       RABBIT: amqp://rabbitmq
-      URLEVENT: http://event:3002/events
-      URLTICKET: http://buy:3003/tickets
-      URLUSER: http://users:3001/users
-      URLAUTH: http://users:3001
+      URLEVENT: http://event:3000/events
+      URLTICKET: http://tickets:3000/tickets
+      URLUSER: http://users:3000/users
+      URLAUTH: http://users:3000
 
   users:
     build: 
       context: ./api-users
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile.prod
     restart: always
     ports:
       - "3001:3000"
-    links:
-      - mongo
+    networks:
+      - backend
     environment:
-      DB_HOST: localhost
+      PORT: 3000
+      DB_HOST: mongo
       DB_PORT: 27017
-      DB_DATABASE: users
+      DB_DATABASE: dev
 
   mongo:
     container_name: mongo
     image: mongo
+    networks:
+      - backend
     ports:
       - "27017:27017"
     environment:
@@ -74,6 +82,8 @@ services:
     container_name: notification
     build: ./notification
     restart: always
+    networks:
+      - backend    
     links:
       - rabbitmq
     environment:
@@ -83,7 +93,12 @@ services:
     container_name: rabbitmq
     image: rabbitmq:3.11-management
     restart: always
+    networks:
+      - backend
     ports:
       - "5672:5672"
       - "15672:15672"
 
+networks:
+  backend:
+    driver: bridge
