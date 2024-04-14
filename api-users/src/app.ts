@@ -27,7 +27,6 @@ export class App {
     this.connectToDatabase();
     this.initializeMiddlewares();
     this.initializeRoutes(routes);
-    this.initializeSwagger();
     this.initializeErrorHandling();
   }
 
